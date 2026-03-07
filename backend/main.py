@@ -28,9 +28,10 @@ except ImportError:
 app = FastAPI(title="AI Attendance System", version="1.0.0")
 
 origins = [
-    "http://localhost",
     "http://localhost:3000",
-    "http://localhost:8000",
+    "http://localhost:8001",
+    # Allow all Vercel preview/production deployments
+    "https://*.vercel.app",
 ]
 
 app.add_middleware(
