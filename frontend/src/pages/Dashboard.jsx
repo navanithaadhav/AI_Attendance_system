@@ -27,12 +27,6 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetchAll();
-    const iv = setInterval(fetchAll, 15000);
-    return () => clearInterval(iv);
-  }, []);
-
   const fetchAll = async () => {
     try {
       const [s, l] = await Promise.all([
@@ -48,6 +42,12 @@ function Dashboard() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchAll();
+    const iv = setInterval(fetchAll, 15000);
+    return () => clearInterval(iv);
+  }, []);
 
   const attendanceRate = stats && stats.total_users > 0
     ? Math.round((stats.present_today / stats.total_users) * 100) : 0;

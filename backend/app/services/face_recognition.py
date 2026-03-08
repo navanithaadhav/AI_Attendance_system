@@ -4,6 +4,7 @@ import numpy as np
 from typing import Tuple, Optional, List
 import pickle
 import os
+import base64
 from sklearn.metrics.pairwise import cosine_distances
 
 class FaceRecognitionModule:
@@ -28,16 +29,35 @@ class FaceRecognitionModule:
     
     def load_encodings(self):
         if os.path.exists(self.encoding_file):
+            print(f"[OK] Loading encodings from local file: {self.encoding_file}")
             with open(self.encoding_file, 'rb') as f:
                 data = pickle.load(f)
                 self.known_face_encodings = data.get('encodings', [])
                 self.known_face_names = data.get('names', [])
+        
+        # Backup: Load from MongoDB if local file is missing or empty
+        if not self.known_face_encodings:
+            try:
+                from ..models.mongo import User
+                db_users = User.objects(face_encoding_data__ne="")
+                if db_users:
+                    print(f"[OK] Restoring {len(db_users)} face encodings from MongoDB...")
+                    for u in db_users:
+                        # Convert base64 string back to numpy array
+                        enc_bytes = base64.b64decode(u.face_encoding_data)
+                        enc_arr = pickle.loads(enc_bytes)
+                        self.known_face_encodings.append(enc_arr)
+                        self.known_face_names.append(u.name)
+                    self.save_encodings() # Sync back to local file
+            except Exception as e:
+                print(f"[ERROR] Could not restore from MongoDB: {e}")
     
     def save_encodings(self):
         data = {
             'encodings': self.known_face_encodings,
             'names': self.known_face_names
         }
+        os.makedirs(os.path.dirname(self.encoding_file), exist_ok=True)
         with open(self.encoding_file, 'wb') as f:
             pickle.dump(data, f)
     
@@ -103,14 +123,14 @@ class FaceRecognitionModule:
             traceback.print_exc()
             return None
     
-    def register_user(self, name: str, image_path: str) -> bool:
+    def register_user(self, name: str, image_path: str) -> Optional[np.ndarray]:
         encoding = self.encode_face(image_path)
         if encoding is not None:
             self.known_face_encodings.append(encoding)
             self.known_face_names.append(name)
             self.save_encodings()
-            return True
-        return False
+            return encoding
+        return None
     
     def recognize_faces(self, image_path: str) -> List[Tuple[str, float]]:
         try:

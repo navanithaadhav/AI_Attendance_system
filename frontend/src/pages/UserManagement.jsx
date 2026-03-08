@@ -1,3 +1,4 @@
+import React, { useState, useEffect, useCallback } from 'react';
 import apiClient from '../services/api';
 
 function UserManagement() {
@@ -13,19 +14,34 @@ function UserManagement() {
   const [registeredUserId, setRegisteredUserId] = useState(null);
   const [showForm, setShowForm] = useState(false);
 
-  useEffect(() => { fetchUsers(); }, []);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       const r = await apiClient.get('/users');
       setUsers(r.data);
     } catch {
       showMsg('Failed to fetch users', 'error');
     }
-  };
+  }, []);
+
+  useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
   const showMsg = (msg, type) => {
-    setMessage(msg); setMessageType(type);
+    // If msg is an object (like FastAPI validation errors), normalize it to a string
+    let finalMsg = msg;
+    if (typeof msg === 'object' && msg !== null) {
+      if (Array.isArray(msg)) {
+        finalMsg = msg.map(m => m.msg || JSON.stringify(m)).join(', ');
+      } else if (msg.detail) {
+        if (Array.isArray(msg.detail)) {
+          finalMsg = msg.detail.map(m => m.msg || JSON.stringify(m)).join(', ');
+        } else {
+          finalMsg = msg.detail;
+        }
+      } else {
+        finalMsg = JSON.stringify(msg);
+      }
+    }
+    setMessage(finalMsg); setMessageType(type);
     setTimeout(() => setMessage(''), 5000);
   };
 
@@ -40,7 +56,7 @@ function UserManagement() {
       setName(''); setEmail('');
       fetchUsers();
     } catch (err) {
-      showMsg(err.response?.data?.detail || 'Failed to register user', 'error');
+      showMsg(err.response?.data || 'Failed to register user', 'error');
     } finally { setLoading(false); }
   };
 
@@ -52,12 +68,14 @@ function UserManagement() {
       const fd = new FormData();
       fd.append('user_id', registeredUserId);
       fd.append('file', selectedFile);
-      await apiClient.post('/users/register-face', fd);
+      await apiClient.post('/users/register-face', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
       showMsg('✓ Face registered successfully!', 'success');
       setSelectedFile(null); setPreviewUrl(''); setRegisteredUserId(null); setShowForm(false);
       fetchUsers();
     } catch (err) {
-      showMsg(err.response?.data?.detail || 'Failed to register face', 'error');
+      showMsg(err.response?.data || 'Failed to register face', 'error');
     } finally { setLoading(false); }
   };
 

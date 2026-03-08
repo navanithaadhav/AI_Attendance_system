@@ -10,6 +10,7 @@ class User(Document):
     name = StringField(required=True, unique=True, max_length=100)
     email = StringField(required=True, unique=True, max_length=200)
     face_encoding = StringField(default="")
+    face_encoding_data = StringField(default="") # Store as base64 or pickle string
     created_at = DateTimeField(default=lambda: datetime.now(pytz.timezone('Asia/Kolkata')))
     is_active = BooleanField(default=True)
 

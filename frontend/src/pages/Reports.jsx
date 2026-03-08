@@ -29,8 +29,6 @@ function Reports() {
   const [stats, setStats] = useState(null);
   const [chartData, setChartData] = useState([]);
 
-  useEffect(() => { fetchData(); }, []);
-
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -61,6 +59,8 @@ function Reports() {
       setLoading(false);
     }
   };
+
+  useEffect(() => { fetchData(); }, []);
 
   const handleFilter = async () => {
     try {

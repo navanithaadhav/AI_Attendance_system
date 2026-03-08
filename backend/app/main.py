@@ -5,6 +5,8 @@ import os
 from io import BytesIO
 from PIL import Image
 import pytz
+import pickle
+import base64
 
 # MongoDB via mongoengine
 from mongoengine import connect, disconnect
@@ -20,7 +22,15 @@ from .schemas.schemas import (
     UserCreate, UserResponse, AttendanceLogResponse,
     FaceRecognitionRequest, FaceRecognitionResponse, AttendanceStats
 )
-from .services.face_recognition import FaceRecognitionModule
+face_module = None
+face_init_error = None
+
+try:
+    from .services.face_recognition import FaceRecognitionModule
+except Exception as e:
+    face_init_error = f"Import error: {str(e)}"
+    print(f"[CRITICAL] Failed to import FaceRecognitionModule: {e}")
+    FaceRecognitionModule = None
 
 app = FastAPI(title="AI Attendance System", version="1.0.0")
 
@@ -39,11 +49,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-face_module = None
+
 
 @app.on_event("startup")
 def startup_event():
-    global face_module
+    global face_module, face_init_error
     # Connect to MongoDB
     try:
         connect(MONGO_DB, host=MONGO_URI, retryWrites=True, w="majority")
@@ -56,6 +66,7 @@ def startup_event():
             face_module = FaceRecognitionModule()
             print("[OK] Face recognition module initialized successfully")
         except Exception as e:
+            face_init_error = str(e)
             print(f"[ERROR] Failed to initialize face recognition module: {e}")
             import traceback
             traceback.print_exc()
@@ -77,7 +88,8 @@ def health_check():
     return {
         "status": "ok",
         "face_recognition_available": face_module is not None,
-        "face_module": "initialized" if face_module else "not available"
+        "face_module": "initialized" if face_module else "not available",
+        "face_init_error": face_init_error
     }
 
 @app.post("/users/register", response_model=UserResponse)
@@ -126,13 +138,16 @@ def register_face(
         temp_path = f"temp_{user_id}.jpg"
         image.save(temp_path)
 
-        success = face_module.register_user(user.name, temp_path)
+        encoding = face_module.register_user(user.name, temp_path)
 
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
-        if success:
+        if encoding is not None:
+            # Convert numpy array to base64 string for storage
+            enc_str = base64.b64encode(pickle.dumps(encoding)).decode('utf-8')
             user.face_encoding = "registered"
+            user.face_encoding_data = enc_str
             user.save()
             return {"message": "Face registered successfully"}
         else:
@@ -181,7 +196,7 @@ def check_in(file: UploadFile = File(...)):
         if not results:
             return FaceRecognitionResponse(
                 recognized=False, user_name=None, confidence=None,
-                message="No face detected"
+                message="No face detected. Please register your face in Admin settings first if you haven't already."
             )
 
         user_name, confidence = results[0]
@@ -292,7 +307,7 @@ def check_out_face(file: UploadFile = File(...)):
         if not results:
             return FaceRecognitionResponse(
                 recognized=False, user_name=None, confidence=None,
-                message="No face detected"
+                message="No face detected. Please register your face in Admin settings first if you haven't already."
             )
 
         user_name, confidence = results[0]
