@@ -9,11 +9,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     DEBIAN_FRONTEND=noninteractive
 
-# Install system dependencies (IMPORTANT for dlib / face_recognition)
+# Install system dependencies for OpenCV and MediaPipe
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    cmake \
-    python3-dev \
     libgl1 \
     libglib2.0-0 \
     libsm6 \
