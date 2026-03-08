@@ -22,7 +22,7 @@ echo "Starting Backend..."
 echo ""
 cd backend
 pip install -q -r requirements.txt
-python -m uvicorn main:app --reload --host 127.0.0.1 --port 8001 &
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8001 &
 BACKEND_PID=$!
 
 sleep 3

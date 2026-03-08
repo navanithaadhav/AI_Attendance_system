@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8001';
+import apiClient from '../services/api';
 
 function fmtTime(raw) {
   if (!raw) return '—';
@@ -38,8 +36,8 @@ function Dashboard() {
   const fetchAll = async () => {
     try {
       const [s, l] = await Promise.all([
-        axios.get(`${API_URL}/attendance/stats`),
-        axios.get(`${API_URL}/attendance/logs`)
+        apiClient.get('/attendance/stats'),
+        apiClient.get('/attendance/logs')
       ]);
       setStats(s.data);
       setLogs(l.data.slice(0, 10));

@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import apiClient from '../services/api';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8001';
 
 function fmt(raw) {
   if (!raw) return '—';
@@ -37,9 +35,9 @@ function Reports() {
     try {
       setLoading(true);
       const [usersRes, logsRes, statsRes] = await Promise.all([
-        axios.get(`${API_URL}/users`),
-        axios.get(`${API_URL}/attendance/logs`),
-        axios.get(`${API_URL}/attendance/stats`),
+        apiClient.get('/users'),
+        apiClient.get('/attendance/logs'),
+        apiClient.get('/attendance/stats'),
       ]);
       const logsData = logsRes.data;
       setUsers(usersRes.data);
@@ -70,7 +68,7 @@ function Reports() {
       const params = new URLSearchParams();
       if (selectedUserId) params.append('user_id', selectedUserId);
       if (selectedDate) params.append('date', selectedDate);
-      const r = await axios.get(`${API_URL}/attendance/logs?${params}`);
+      const r = await apiClient.get(`/attendance/logs?${params}`);
       setLogs(r.data);
     } catch (err) {
       console.error('Filter failed:', err);

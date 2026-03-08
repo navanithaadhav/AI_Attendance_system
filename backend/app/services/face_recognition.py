@@ -12,7 +12,7 @@ class FaceRecognitionModule:
         self.model = model
         self.known_face_encodings = []
         self.known_face_names = []
-        self.encoding_file = "face_encodings.pkl"
+        self.encoding_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "face_encodings.pkl")
         
         # Use MediaPipe for face detection
         self.mp_face_detection = mp.solutions.face_detection

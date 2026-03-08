@@ -1,7 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import axios from 'axios';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8001';
+import apiClient from '../services/api';
 
 function CheckIn() {
   const [message, setMessage] = useState('');
@@ -77,7 +75,7 @@ function CheckIn() {
           formData.append('file', blob, 'check-in.jpg');
 
           try {
-            const response = await axios.post(`${API_URL}/attendance/check-in`, formData, {
+            const response = await apiClient.post('/attendance/check-in', formData, {
               timeout: 30000,
               headers: {
                 'Content-Type': 'multipart/form-data'

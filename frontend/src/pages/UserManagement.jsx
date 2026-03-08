@@ -1,7 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8001';
+import apiClient from '../services/api';
 
 function UserManagement() {
   const [users, setUsers] = useState([]);
@@ -20,7 +17,7 @@ function UserManagement() {
 
   const fetchUsers = async () => {
     try {
-      const r = await axios.get(`${API_URL}/users`);
+      const r = await apiClient.get('/users');
       setUsers(r.data);
     } catch {
       showMsg('Failed to fetch users', 'error');
@@ -37,7 +34,7 @@ function UserManagement() {
     if (!name.trim() || !email.trim()) return showMsg('Please fill in all fields', 'error');
     try {
       setLoading(true);
-      const r = await axios.post(`${API_URL}/users/register`, { name: name.trim(), email: email.trim() });
+      const r = await apiClient.post('/users/register', { name: name.trim(), email: email.trim() });
       showMsg('✓ User registered! Now upload their face photo.', 'success');
       setRegisteredUserId(r.data.id);
       setName(''); setEmail('');
@@ -55,7 +52,7 @@ function UserManagement() {
       const fd = new FormData();
       fd.append('user_id', registeredUserId);
       fd.append('file', selectedFile);
-      await axios.post(`${API_URL}/users/register-face`, fd);
+      await apiClient.post('/users/register-face', fd);
       showMsg('✓ Face registered successfully!', 'success');
       setSelectedFile(null); setPreviewUrl(''); setRegisteredUserId(null); setShowForm(false);
       fetchUsers();
@@ -67,7 +64,7 @@ function UserManagement() {
   const handleDeleteUser = async (userId, uname) => {
     if (!window.confirm(`Delete "${uname}"? This removes all their attendance records.`)) return;
     try {
-      await axios.delete(`${API_URL}/users/${userId}`);
+      await apiClient.delete(`/users/${userId}`);
       showMsg('✓ User deleted', 'success');
       fetchUsers();
     } catch { showMsg('Failed to delete user', 'error'); }
@@ -75,7 +72,7 @@ function UserManagement() {
 
   const handleToggleActive = async (user) => {
     try {
-      await axios.put(`${API_URL}/users/${user.id}?is_active=${!user.is_active}`);
+      await apiClient.put(`/users/${user.id}?is_active=${!user.is_active}`);
       showMsg(`✓ User ${!user.is_active ? 'activated' : 'deactivated'}`, 'success');
       fetchUsers();
     } catch { showMsg('Failed to update user', 'error'); }

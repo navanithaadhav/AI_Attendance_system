@@ -15,15 +15,12 @@ load_dotenv()
 MONGO_URI = os.getenv('MONGO_URI', 'mongodb+srv://navanithaweb_db_user:YH12SXnQ2HU1WKUv@cluster0.2ld6rvl.mongodb.net')
 MONGO_DB = os.getenv('MONGODB_DATABASE', 'attendance_db')
 
-from mongo_models import User, AttendanceLog, get_next_user_id
-from schemas import (
+from .models.mongo import User, AttendanceLog, get_next_user_id
+from .schemas.schemas import (
     UserCreate, UserResponse, AttendanceLogResponse,
     FaceRecognitionRequest, FaceRecognitionResponse, AttendanceStats
 )
-try:
-    from face_recognition_module import FaceRecognitionModule
-except ImportError:
-    FaceRecognitionModule = None
+from .services.face_recognition import FaceRecognitionModule
 
 app = FastAPI(title="AI Attendance System", version="1.0.0")
 
