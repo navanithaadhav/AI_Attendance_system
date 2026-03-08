@@ -81,7 +81,11 @@ def shutdown_event():
 
 @app.get("/")
 def read_root():
-    return {"message": "AI Attendance System API", "face_recognition_available": face_module is not None}
+    return {
+        "message": "AI Attendance System API", 
+        "face_recognition_available": face_module is not None,
+        "init_error": face_init_error
+    }
 
 @app.get("/health")
 def health_check():
