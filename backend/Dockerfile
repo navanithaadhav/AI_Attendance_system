@@ -34,11 +34,12 @@ COPY . .
 # Create data directory
 RUN mkdir -p data
 
-EXPOSE 8001
+ENV PORT=8001
+EXPOSE 8001 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')" || exit 1
+    CMD python -c "import urllib.request, os; urllib.request.urlopen(f'http://localhost:{os.environ.get(\"PORT\", 8001)}/health')" || exit 1
 
-# Run server
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
+# Run server (uses $PORT from Railway, defaults to 8001 locally)
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8001}

@@ -1,5 +1,12 @@
 import cv2
-import mediapipe as mp
+try:
+    import mediapipe as mp
+    MEDIAPIPE_AVAILABLE = True
+    print("[OK] MediaPipe loaded successfully")
+except ImportError as e:
+    MEDIAPIPE_AVAILABLE = False
+    mp = None
+    print(f"[WARN] MediaPipe not available, using OpenCV cascade fallback: {e}")
 import numpy as np
 from typing import Tuple, Optional, List
 import pickle
@@ -15,11 +22,16 @@ class FaceRecognitionModule:
         self.known_face_names = []
         self.encoding_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "face_encodings.pkl")
         
-        # Use MediaPipe for face detection
-        self.mp_face_detection = mp.solutions.face_detection
-        self.face_detector = self.mp_face_detection.FaceDetection(
-            model_selection=0, min_detection_confidence=0.3
-        )
+        # Use MediaPipe for face detection (if available)
+        self.face_detector = None
+        if MEDIAPIPE_AVAILABLE:
+            self.mp_face_detection = mp.solutions.face_detection
+            self.face_detector = self.mp_face_detection.FaceDetection(
+                model_selection=0, min_detection_confidence=0.3
+            )
+            print("[OK] MediaPipe face detector initialized")
+        else:
+            print("[WARN] MediaPipe not available, using OpenCV cascade only")
         
         # Also load OpenCV cascade as fallback
         cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
@@ -93,14 +105,15 @@ class FaceRecognitionModule:
                 print(f"[DEBUG] Failed to read image for encoding: {image_path}")
                 return None
             
-            # Try MediaPipe first
+            # Try MediaPipe first (if available)
             image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            results = self.face_detector.process(image_rgb)
-            
-            if results.detections:
-                print("[DEBUG] MediaPipe detected face for encoding")
-                encoding = self._extract_face_features(image, results.detections[0])
-                return encoding
+            if self.face_detector:
+                results = self.face_detector.process(image_rgb)
+                
+                if results.detections:
+                    print("[DEBUG] MediaPipe detected face for encoding")
+                    encoding = self._extract_face_features(image, results.detections[0])
+                    return encoding
             
             # Fallback to cascade classifier
             print("[DEBUG] MediaPipe failed, trying cascade classifier for encoding")
@@ -141,14 +154,15 @@ class FaceRecognitionModule:
             
             print(f"[DEBUG] Image shape: {image.shape}")
             
-            # Try MediaPipe first
+            # Try MediaPipe first (if available)
             image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            results = self.face_detector.process(image_rgb)
-            detections = results.detections if results.detections else []
+            detections = []
+            if self.face_detector:
+                results = self.face_detector.process(image_rgb)
+                detections = results.detections if results.detections else []
+                print(f"[DEBUG] MediaPipe detections: {len(detections)}")
             
-            print(f"[DEBUG] MediaPipe detections: {len(detections)}")
-            
-            # If MediaPipe doesn't find faces, try cascade classifier
+            # If MediaPipe not available or doesn't find faces, try cascade classifier
             if not detections:
                 print("[DEBUG] MediaPipe found no faces, trying cascade classifier...")
                 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -231,23 +245,30 @@ class FaceRecognitionModule:
             if image is None:
                 return []
             
-            image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             h, w = image.shape[:2]
-            results = self.face_detector.process(image_rgb)
             
-            if not results.detections:
-                return []
-            
-            face_locations = []
-            for detection in results.detections:
-                bbox = detection.location_data.relative_bounding_box
-                x_min = int(bbox.xmin * w)
-                y_min = int(bbox.ymin * h)
-                x_max = int((bbox.xmin + bbox.width) * w)
-                y_max = int((bbox.ymin + bbox.height) * h)
+            # Try MediaPipe first (if available)
+            if self.face_detector:
+                image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                results = self.face_detector.process(image_rgb)
                 
-                face_locations.append((y_min, x_max, y_max, x_min))
+                if results.detections:
+                    face_locations = []
+                    for detection in results.detections:
+                        bbox = detection.location_data.relative_bounding_box
+                        x_min = int(bbox.xmin * w)
+                        y_min = int(bbox.ymin * h)
+                        x_max = int((bbox.xmin + bbox.width) * w)
+                        y_max = int((bbox.ymin + bbox.height) * h)
+                        face_locations.append((y_min, x_max, y_max, x_min))
+                    return face_locations
             
+            # Fallback to OpenCV cascade
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            faces = self.face_cascade.detectMultiScale(gray, 1.1, 4)
+            face_locations = []
+            for (x, y, fw, fh) in faces:
+                face_locations.append((y, x + fw, y + fh, x))
             return face_locations
         except Exception as e:
             print(f"Error detecting faces: {e}")
