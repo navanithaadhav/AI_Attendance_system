@@ -28,8 +28,10 @@ face_init_error = None
 try:
     from .services.face_recognition import FaceRecognitionModule
 except Exception as e:
+    import traceback
     face_init_error = f"Import error: {str(e)}"
     print(f"[CRITICAL] Failed to import FaceRecognitionModule: {e}")
+    traceback.print_exc()
     FaceRecognitionModule = None
 
 app = FastAPI(title="AI Attendance System", version="1.0.0")

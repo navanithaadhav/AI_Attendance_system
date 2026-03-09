@@ -1,8 +1,11 @@
 [phases.setup]
-nixPkgs = ["python311", "libGL", "libGLU", "glib", "mesa", "libSM", "libXext", "libXrender"]
+nixPkgs = ["python311", "libGL", "libGLU", "glib", "mesa", "libSM", "libXext", "libXrender", "xorg.libX11", "xorg.libXi", "stdenv.cc.cc.lib"]
 
 [phases.install]
 cmds = ["pip install -r requirements.txt"]
 
 [phases.build]
 cmds = ["echo 'Building...'"]
+
+[start]
+cmd = "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8001}"
